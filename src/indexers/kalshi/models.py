@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
+
 from dateutil.parser import isoparse
 
 
@@ -25,7 +26,7 @@ class Trade:
             if not val:
                 return 0
             return int(float(val) * 100)
-            
+
         def parse_float_string_to_int(val: Optional[str]) -> int:
             """Converts string float values like '10.00' to integers (10)."""
             if not val:
@@ -77,7 +78,7 @@ class Market:
             if not val:
                 return None
             return int(float(val) * 100)
-            
+
         def parse_float_string_to_int(val: Optional[str]) -> int:
             """Converts string float values like '10.00' to integers (10)."""
             if not val:
@@ -92,19 +93,19 @@ class Market:
             yes_sub_title=data.get("yes_sub_title", ""),
             no_sub_title=data.get("no_sub_title", ""),
             status=data["status"],
-            
+
             # Map to the exact keys in the JSON and convert to cents
             yes_bid=parse_dollars_to_cents(data.get("yes_bid_dollars")),
             yes_ask=parse_dollars_to_cents(data.get("yes_ask_dollars")),
             no_bid=parse_dollars_to_cents(data.get("no_bid_dollars")),
             no_ask=parse_dollars_to_cents(data.get("no_ask_dollars")),
             last_price=parse_dollars_to_cents(data.get("last_price_dollars")),
-            
+
             # Map to the _fp (floating point) keys and convert to ints
             volume=parse_float_string_to_int(data.get("volume_fp")),
             volume_24h=parse_float_string_to_int(data.get("volume_24h_fp")),
             open_interest=parse_float_string_to_int(data.get("open_interest_fp")),
-            
+
             result=data.get("result", ""),
             created_time=parse_time(data.get("created_time")),
             open_time=parse_time(data.get("open_time")),
