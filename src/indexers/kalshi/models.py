@@ -14,7 +14,7 @@ class Trade:
     trade_id: str
     ticker: str
     count: int
-    yes_price: int # Stored as cents
+    yes_price: int  # Stored as cents
     no_price: int  # Stored as cents
     taker_side: str
     created_time: datetime
@@ -44,6 +44,7 @@ class Trade:
             created_time=parse_datetime(data["created_time"]),
         )
 
+
 @dataclass
 class Market:
     ticker: str
@@ -53,11 +54,11 @@ class Market:
     yes_sub_title: str
     no_sub_title: str
     status: str
-    yes_bid: Optional[int]    # Stored as cents
-    yes_ask: Optional[int]    # Stored as cents
-    no_bid: Optional[int]     # Stored as cents
-    no_ask: Optional[int]     # Stored as cents
-    last_price: Optional[int] # Stored as cents
+    yes_bid: Optional[int]  # Stored as cents
+    yes_ask: Optional[int]  # Stored as cents
+    no_bid: Optional[int]  # Stored as cents
+    no_ask: Optional[int]  # Stored as cents
+    last_price: Optional[int]  # Stored as cents
     volume: int
     volume_24h: int
     open_interest: int
@@ -93,19 +94,16 @@ class Market:
             yes_sub_title=data.get("yes_sub_title", ""),
             no_sub_title=data.get("no_sub_title", ""),
             status=data["status"],
-
             # Map to the exact keys in the JSON and convert to cents
             yes_bid=parse_dollars_to_cents(data.get("yes_bid_dollars")),
             yes_ask=parse_dollars_to_cents(data.get("yes_ask_dollars")),
             no_bid=parse_dollars_to_cents(data.get("no_bid_dollars")),
             no_ask=parse_dollars_to_cents(data.get("no_ask_dollars")),
             last_price=parse_dollars_to_cents(data.get("last_price_dollars")),
-
             # Map to the _fp (floating point) keys and convert to ints
             volume=parse_float_string_to_int(data.get("volume_fp")),
             volume_24h=parse_float_string_to_int(data.get("volume_24h_fp")),
             open_interest=parse_float_string_to_int(data.get("open_interest_fp")),
-
             result=data.get("result", ""),
             created_time=parse_time(data.get("created_time")),
             open_time=parse_time(data.get("open_time")),
