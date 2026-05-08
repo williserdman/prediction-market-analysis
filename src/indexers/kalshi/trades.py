@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 import duckdb
 import pandas as pd
@@ -35,7 +35,17 @@ class KalshiTradesIndexer(Indexer):
         self._max_ts = max_ts
         self._max_workers = max_workers
 
-    def run(self) -> None:
+    def run(self):
+        all_tickers = duckdb.sql(f"""
+            SELECT DISTINCT ticker FROM '{MARKETS_DIR}/markets_*_*.parquet'
+            WHERE volume >= 100
+            ORDER BY ticker
+        """).fetchall()
+        all_tickers = [row[0] for row in all_tickers]
+        print(f"Found {len(all_tickers)} unique markets")
+        self.get_tickers(all_tickers)
+
+    def get_tickers(self, all_tickers: list[Any]) -> None:
         BATCH_SIZE = 10000
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         CURSOR_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -47,21 +57,15 @@ class KalshiTradesIndexer(Indexer):
         if parquet_files:
             print("Loading existing trades for deduplication...")
             try:
-                result = duckdb.sql(f"SELECT DISTINCT trade_id, ticker FROM '{DATA_DIR}/trades_*.parquet'").fetchall()
+                result = duckdb.sql(
+                    f"SELECT DISTINCT trade_id, ticker FROM '{DATA_DIR}/trades_*.parquet'"
+                ).fetchall()
                 for trade_id, ticker in result:
                     existing_trade_ids.add(trade_id)
                     existing_tickers.add(ticker)
                 print(f"Found {len(existing_trade_ids)} existing trades")
             except Exception:
                 pass
-
-        all_tickers = duckdb.sql(f"""
-            SELECT DISTINCT ticker FROM '{MARKETS_DIR}/markets_*_*.parquet'
-            WHERE volume >= 100
-            ORDER BY ticker
-        """).fetchall()
-        all_tickers = [row[0] for row in all_tickers]
-        print(f"Found {len(all_tickers)} unique markets")
 
         # Filter to tickers not fully processed
         tickers_to_process = [t for t in all_tickers if t not in existing_tickers]
@@ -95,7 +99,10 @@ class KalshiTradesIndexer(Indexer):
             nonlocal next_chunk_idx
             if not trades_batch:
                 return 0
-            chunk_path = DATA_DIR / f"trades_{next_chunk_idx}_{next_chunk_idx + BATCH_SIZE}.parquet"
+            chunk_path = (
+                DATA_DIR
+                / f"trades_{next_chunk_idx}_{next_chunk_idx + BATCH_SIZE}.parquet"
+            )
             df = pd.DataFrame(trades_batch)
             df.to_parquet(chunk_path)
             next_chunk_idx += BATCH_SIZE
@@ -115,7 +122,9 @@ class KalshiTradesIndexer(Indexer):
                     return []
                 fetched_at = datetime.utcnow()
                 return [
-                    {**asdict(t), "_fetched_at": fetched_at} for t in trades if t.trade_id not in existing_trade_ids
+                    {**asdict(t), "_fetched_at": fetched_at}
+                    for t in trades
+                    if t.trade_id not in existing_trade_ids
                 ]
             finally:
                 client.close()
@@ -123,7 +132,10 @@ class KalshiTradesIndexer(Indexer):
         # Concurrent fetching
         pbar = tqdm(total=len(tickers_to_process), desc="Fetching trades")
         with ThreadPoolExecutor(max_workers=self._max_workers) as executor:
-            futures = {executor.submit(fetch_ticker_trades, ticker): ticker for ticker in tickers_to_process}
+            futures = {
+                executor.submit(fetch_ticker_trades, ticker): ticker
+                for ticker in tickers_to_process
+            }
 
             for future in as_completed(futures):
                 ticker = futures[future]
@@ -133,7 +145,11 @@ class KalshiTradesIndexer(Indexer):
                         all_trades.extend(trades_data)
 
                     pbar.update(1)
-                    pbar.set_postfix(buffer=len(all_trades), saved=total_trades_saved, last=ticker[-20:])
+                    pbar.set_postfix(
+                        buffer=len(all_trades),
+                        saved=total_trades_saved,
+                        last=ticker[-20:],
+                    )
 
                     # Save in batches
                     while len(all_trades) >= BATCH_SIZE:

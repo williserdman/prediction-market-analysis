@@ -109,3 +109,72 @@ class Market:
             open_time=parse_time(data.get("open_time")),
             close_time=parse_time(data.get("close_time")),
         )
+
+
+@dataclass
+class Candle:
+    end_period_ts: int
+    # Price OHLC (Stored as cents)
+    price_open: int
+    price_high: int
+    price_low: int
+    price_close: int
+    price_mean: int
+
+    # Yes Bid OHLC (Stored as cents)
+    yes_bid_open: int
+    yes_bid_high: int
+    yes_bid_low: int
+    yes_bid_close: int
+
+    # Yes Ask OHLC (Stored as cents)
+    yes_ask_open: int
+    yes_ask_high: int
+    yes_ask_low: int
+    yes_ask_close: int
+
+    # Metrics
+    volume: int
+    open_interest: int
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Candle":
+        def to_cents(val: Optional[str]) -> int:
+            """Helper to convert '$0.5600' string to 56 integer cents."""
+            if not val:
+                return 0
+            return int(float(val) * 100)
+
+        def to_int(val: Optional[str]) -> int:
+            """Helper to convert '10.00' string to 10 integer."""
+            if not val:
+                return 0
+            return int(float(val))
+
+        # Extract nested dictionaries
+        price = data.get("price", {})
+        y_bid = data.get("yes_bid", {})
+        y_ask = data.get("yes_ask", {})
+
+        return cls(
+            end_period_ts=data.get("end_period_ts", 0),
+            # Price mapping
+            price_open=to_cents(price.get("open")),
+            price_high=to_cents(price.get("high")),
+            price_low=to_cents(price.get("low")),
+            price_close=to_cents(price.get("close")),
+            price_mean=to_cents(price.get("mean")),
+            # Yes Bid mapping
+            yes_bid_open=to_cents(y_bid.get("open")),
+            yes_bid_high=to_cents(y_bid.get("high")),
+            yes_bid_low=to_cents(y_bid.get("low")),
+            yes_bid_close=to_cents(y_bid.get("close")),
+            # Yes Ask mapping
+            yes_ask_open=to_cents(y_ask.get("open")),
+            yes_ask_high=to_cents(y_ask.get("high")),
+            yes_ask_low=to_cents(y_ask.get("low")),
+            yes_ask_close=to_cents(y_ask.get("close")),
+            # Totals
+            volume=to_int(data.get("volume")),
+            open_interest=to_int(data.get("open_interest")),
+        )

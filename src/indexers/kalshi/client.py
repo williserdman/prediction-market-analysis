@@ -105,7 +105,7 @@ class KalshiClient:
         while True:
             params = {"limit": limit}
             if cursor:
-                params["cursor"] = cursor
+                params["cursor"] = cursor  # type: ignore
             if min_close_ts is not None:
                 params["min_close_ts"] = min_close_ts
             if max_close_ts is not None:
@@ -124,3 +124,27 @@ class KalshiClient:
     def get_recent_trades(self, limit: int = 100) -> list[Trade]:
         data = self._get("/markets/trades", params={"limit": limit})
         return [Trade.from_dict(t) for t in data.get("trades", [])]
+
+    def get_historical_candlesticks(
+        self,
+        ticker: str,
+        start_ts: int,
+        end_ts: int,
+        period_interval: int,
+    ) -> dict:
+        """
+        Fetch historical candlestick data for an archived market.
+
+        :param ticker: Market ticker
+        :param start_ts: Start Unix timestamp
+        :param end_ts: End Unix timestamp
+        :param period_interval: 1 (1 min), 60 (1 hr), or 1440 (1 day)
+        """
+        params = {
+            "start_ts": start_ts,
+            "end_ts": end_ts,
+            "period_interval": period_interval,
+        }
+
+        # Note the /historical prefix for this specific endpoint
+        return self._get(f"/historical/markets/{ticker}/candlesticks", params=params)
